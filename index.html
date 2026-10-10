@@ -1,0 +1,249 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Kohi Photobooth ☕</title>
+<style>
+:root{--bg:#f7f3eb;--card:#fff9f0;--ink:#3d3630;--terra:#c46849;--sage:#80967a;--cream:#ede5d5;--border:#e0d4c1;--flash:rgba(255,255,255,0.9)}
+*{box-sizing:border-box;margin:0;padding:0;font-family:ui-serif,Georgia,serif}
+body{background:var(--bg);color:var(--ink);min-height:100vh;padding:16px;display:flex;flex-direction:column;align-items:center}
+header{text-align:center;margin-bottom:16px}
+header h1{font-size:1.7rem;color:var(--terra);letter-spacing:1px}
+header p{font-size:.85rem;color:var(--sage);font-style:italic}
+.container{display:grid;grid-template-columns:1fr;gap:20px;max-width:900px;width:100%}
+@media(min-width:768px){.container{grid-template-columns:1.2fr .8fr}}
+.card{background:var(--card);border:2px solid var(--border);border-radius:18px;padding:16px;box-shadow:0 4px 14px rgba(61,54,48,0.06)}
+.viewfinder{position:relative;width:100%;aspect-ratio:4/3;background:#2a2521;border-radius:12px;overflow:hidden;display:flex;align-items:center;justify-content:center}
+video{width:100%;height:100%;object-fit:cover;transform:scaleX(-1)}
+.overlay-flash{position:absolute;inset:0;background:var(--flash);opacity:0;pointer-events:none;transition:opacity .15s ease}
+.overlay-flash.active{opacity:1}
+.countdown-tag{position:absolute;font-size:3.5rem;font-weight:bold;color:#fff;text-shadow:0 2px 8px rgba(0,0,0,0.6);display:none}
+.error-state{position:absolute;inset:0;background:rgba(42,37,33,0.9);color:#f7f3eb;display:none;flex-direction:column;align-items:center;justify-content:center;padding:16px;text-align:center;font-size:.9rem;gap:8px}
+.section-title{font-size:.85rem;text-transform:uppercase;letter-spacing:1px;color:var(--terra);font-weight:bold;margin:12px 0 6px}
+.controls-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+label{font-size:.85rem;color:var(--ink)}
+input[type=number]{width:55px;padding:6px;border-radius:8px;border:1.5px solid var(--border);background:#fff;font-size:.9rem;text-align:center}
+button{cursor:pointer;border:none;border-radius:9px;padding:7px 12px;font-size:.85rem;font-weight:600;transition:.2s;background:var(--cream);color:var(--ink)}
+button:hover{opacity:.9;transform:translateY(-1px)}
+.btn-terra{background:var(--terra);color:#fff}
+.btn-sage{background:var(--sage);color:#fff}
+.pills{display:flex;gap:6px;flex-wrap:wrap}
+.pill{border:1px solid var(--border);padding:5px 10px;border-radius:20px;font-size:.78rem;background:#fff}
+.pill.active{background:var(--ink);color:#fff;border-color:var(--ink)}
+.preview-box{display:flex;flex-direction:column;align-items:center;gap:12px}
+canvas{max-width:100%;height:auto;border-radius:8px;box-shadow:0 6px 16px rgba(61,54,48,0.12);background:#fff}
+.stickers-bar{display:flex;gap:8px;font-size:1.2rem}
+.sticker-btn{cursor:pointer;background:#fff;border:1px solid var(--border);padding:4px 8px;border-radius:8px}
+.slots-indicator{display:flex;gap:6px;margin-top:4px}
+.slot{flex:1;height:5px;border-radius:3px;background:var(--border)}
+.slot.filled{background:var(--terra)}
+</style>
+</head>
+<body>
+<header>
+  <h1>kohi photobooth ☕</h1>
+  <p>tangkap momen hangat & nostalgia dalam 3 pose</p>
+</header>
+<div class="container">
+  <div class="card">
+    <div class="viewfinder" id="vf">
+      <video id="video" autoplay playsinline muted></video>
+      <div id="flash" class="overlay-flash"></div>
+      <div id="countOverlay" class="countdown-tag">3</div>
+      <div id="camErr" class="error-state">
+        <p>📷 Kamera tidak aktif / izin ditolak.</p>
+        <button class="btn-terra" onclick="startCamera()">Coba Lagi</button>
+      </div>
+    </div>
+    <div class="slots-indicator">
+      <div id="sl0" class="slot"></div>
+      <div id="sl1" class="slot"></div>
+      <div id="sl2" class="slot"></div>
+    </div>
+    <div class="section-title">Waktu & Sesi Foto</div>
+    <div class="controls-row">
+      <label for="timeInput">Jeda (detik):</label>
+      <input type="number" id="timeInput" min="1" max="10" value="3">
+      <button class="btn-terra" id="btnStart" onclick="startSession()">Mulai</button>
+      <button id="btnPause" onclick="pauseSession()">Jeda</button>
+      <button id="btnReset" onclick="resetSession()">Reset</button>
+    </div>
+    <div class="section-title">Filter Analog</div>
+    <div class="pills" id="filters">
+      <button class="pill active" onclick="setFilter('none')">Natural</button>
+      <button class="pill" onclick="setFilter('sepia(0.6) contrast(1.1)')">Retro Warm</button>
+      <button class="pill" onclick="setFilter('grayscale(1) contrast(1.2)')">Monochrome</button>
+      <button class="pill" onclick="setFilter('hue-rotate(60deg) saturate(0.8)')">Vintage Sage</button>
+    </div>
+    <div class="section-title">Warna Strip</div>
+    <div class="pills">
+      <button class="pill active" onclick="setFrameColor('#fff9f0')">Krem Susu</button>
+      <button class="pill" onclick="setFrameColor('#ede5d5')">Paper Vintage</button>
+      <button class="pill" onclick="setFrameColor('#e3ebe0')">Matcha Sage</button>
+      <button class="pill" onclick="setFrameColor('#2b2520')">Charcoal</button>
+    </div>
+    <div class="section-title">Baki Stiker</div>
+    <div class="stickers-bar">
+      <span class="sticker-btn" onclick="addSticker('☕')">☕</span>
+      <span class="sticker-btn" onclick="addSticker('🌿')">🌿</span>
+      <span class="sticker-btn" onclick="addSticker('✨')">✨</span>
+      <span class="sticker-btn" onclick="addSticker('🤎')">🤎</span>
+      <span class="sticker-btn" onclick="addSticker('🎞️')">🎞️</span>
+    </div>
+  </div>
+  <div class="card preview-box">
+    <div class="section-title" style="margin:0">Strip Pratinjau</div>
+    <canvas id="strip" width="300" height="740"></canvas>
+    <div class="controls-row">
+      <button class="btn-sage" onclick="downloadStrip()">Unduh Strip (PNG)</button>
+      <button onclick="clearStrip()">Kosongkan</button>
+    </div>
+  </div>
+</div>
+<script>
+const video=document.getElementById('video'),strip=document.getElementById('strip'),ctx=strip.getContext('2d'),
+flash=document.getElementById('flash'),countOverlay=document.getElementById('countOverlay'),camErr=document.getElementById('camErr'),
+timeInput=document.getElementById('timeInput'),btnStart=document.getElementById('btnStart'),btnPause=document.getElementById('btnPause');
+let stream=null,timer=null,timeLeft=3,isPaused=false,currentPose=0;
+let photos=[null,null,null],stickers=[],activeFilter='none',frameColor='#fff9f0';
+
+async function startCamera(){
+  camErr.style.display='none';
+  try{
+    stream=await navigator.mediaDevices.getUserMedia({video:{width:{ideal:640},height:{ideal:480},facingMode:'user'}});
+    video.srcObject=stream;
+  }catch(err){
+    camErr.style.display='flex';
+  }
+}
+
+function setFilter(f){
+  activeFilter=f;
+  video.style.filter=f;
+  document.querySelectorAll('#filters .pill').forEach(b=>b.classList.toggle('active',b.getAttribute('onclick').includes(f)));
+}
+function setFrameColor(col){
+  frameColor=col;
+  drawStrip();
+}
+function addSticker(stk){
+  stickers.push({icon:stk,x:Math.random()*220+30,y:Math.random()*600+60});
+  drawStrip();
+}
+
+function startSession(){
+  if(currentPose>=3) currentPose=0;
+  if(!isPaused) timeLeft=parseInt(timeInput.value)||3;
+  isPaused=false;
+  btnStart.disabled=true;
+  countOverlay.style.display='block';
+  countOverlay.textContent=timeLeft;
+  clearInterval(timer);
+  timer=setInterval(()=>{
+    if(timeLeft>1){
+      timeLeft--;
+      countOverlay.textContent=timeLeft;
+    }else{
+      clearInterval(timer);
+      capturePose();
+    }
+  },1000);
+}
+
+function pauseSession(){
+  if(!timer&&!isPaused)return;
+  clearInterval(timer);
+  isPaused=true;
+  btnStart.disabled=false;
+  countOverlay.textContent='II';
+}
+
+function resetSession(){
+  clearInterval(timer);
+  timer=null;
+  isPaused=false;
+  btnStart.disabled=false;
+  countOverlay.style.display='none';
+  timeLeft=parseInt(timeInput.value)||3;
+  currentPose=0;
+  photos=[null,null,null];
+  stickers=[];
+  updateSlots();
+  drawStrip();
+}
+
+function capturePose(){
+  flash.classList.add('active');
+  setTimeout(()=>flash.classList.remove('active'),200);
+  const memCanvas=document.createElement('canvas');
+  memCanvas.width=video.videoWidth||480;
+  memCanvas.height=video.videoHeight||360;
+  const mctx=memCanvas.getContext('2d');
+  mctx.filter=activeFilter;
+  mctx.translate(memCanvas.width,0);
+  mctx.scale(-1,1);
+  mctx.drawImage(video,0,0,memCanvas.width,memCanvas.height);
+  photos[currentPose]=memCanvas;
+  updateSlots();
+  currentPose++;
+  drawStrip();
+  if(currentPose<3){
+    timeLeft=parseInt(timeInput.value)||3;
+    setTimeout(startSession,800);
+  }else{
+    countOverlay.style.display='none';
+    btnStart.disabled=false;
+  }
+}
+
+function updateSlots(){
+  for(let i=0;i<3;i++){
+    document.getElementById('sl'+i).classList.toggle('filled',Boolean(photos[i]));
+  }
+}
+
+function drawStrip(){
+  ctx.fillStyle=frameColor;
+  ctx.fillRect(0,0,strip.width,strip.height);
+  const pw=260,ph=195,x=20;
+  for(let i=0;i<3;i++){
+    const y=20+i*(ph+14);
+    if(photos[i]){
+      ctx.drawImage(photos[i],x,y,pw,ph);
+    }else{
+      ctx.fillStyle='rgba(61,54,48,0.08)';
+      ctx.fillRect(x,y,pw,ph);
+      ctx.fillStyle='#999';
+      ctx.font='14px Georgia';
+      ctx.textAlign='center';
+      ctx.fillText('Pose '+(i+1),strip.width/2,y+ph/2);
+    }
+  }
+  ctx.fillStyle=(frameColor==='#2b2520')?'#ede5d5':'#3d3630';
+  ctx.font='italic 13px Georgia';
+  ctx.textAlign='center';
+  const today=new Date().toLocaleDateString('id-ID',{day:'2-digit',month:'short',year:'numeric'});
+  ctx.fillText('☕ kohi booth • '+today,strip.width/2,710);
+  stickers.forEach(s=>{
+    ctx.font='24px serif';
+    ctx.fillText(s.icon,s.x,s.y);
+  });
+}
+
+function downloadStrip(){
+  const a=document.createElement('a');
+  a.download='kohi-photobooth-'+Date.now()+'.png';
+  a.href=strip.toDataURL('image/png');
+  a.click();
+}
+
+function clearStrip(){
+  resetSession();
+}
+
+startCamera();
+drawStrip();
+</script>
+</body>
+</html>
